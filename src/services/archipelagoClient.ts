@@ -34,12 +34,13 @@ export class ArchipelagoClient {
   private slotInfo: ConnectedPacket['slot_info'] | null = null
   private players: ConnectedPacket['players'] | null = null
   private serverUrl: string
+  private serverVersion: RoomInfoPacket['version'] | null = null
 
   constructor(serverUrl: string) {
     this.serverUrl = serverUrl
   }
 
-  connect(password: string | null = null): void {
+  connect(): void {
     if (this.ws?.readyState === WebSocket.OPEN) {
       console.warn('Already connected')
       return
@@ -98,17 +99,34 @@ export class ArchipelagoClient {
   }
 
   authenticate(slotName: string, password: string | null = null): void {
-    this.send({
+    const version = this.serverVersion ?? {
+      major: 0,
+      minor: 6,
+      build: 5,
+      class: 'Version',
+    }
+
+    const connectPacket: APClientPacket = {
       cmd: 'Connect',
       password: password || null,
-      game: '',  // Empty for spectator/tracker
+      game: '', // Empty for tracker; version/game validation is skipped when using Tracker tag
       name: slotName,
       uuid: this.generateUUID(),
-      version: { major: 0, minor: 4, build: 6, class: 'Version' },
-      items_handling: 0b111,  // Receive all items
+      version,
+      items_handling: 0b111, // Receive all items
       tags: ['Tracker', 'WebTracker'],
       slot_data: true,
+    }
+
+    console.log('Archipelago connect packet', {
+      serverUrl: this.serverUrl,
+      name: connectPacket.name,
+      passwordProvided: !!password,
+      version: connectPacket.version,
+      tags: connectPacket.tags,
     })
+
+    this.send(connectPacket)
   }
 
   requestDataPackage(games?: string[]): void {
@@ -189,6 +207,7 @@ export class ArchipelagoClient {
   }
 
   private handleRoomInfo(packet: RoomInfoPacket): void {
+    this.serverVersion = packet.version
     this.emit('roomInfo', packet)
   }
 
@@ -198,6 +217,7 @@ export class ArchipelagoClient {
   }
 
   private handleConnected(packet: ConnectedPacket): void {
+    console.log('Connected packet:', packet)
     this.slotInfo = packet.slot_info
     this.players = packet.players
     this.emit('slotConnected', packet)
@@ -221,7 +241,11 @@ export class ArchipelagoClient {
   }
 
   private generateUUID(): string {
-    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+    if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) {
+      return crypto.randomUUID()
+    }
+    // Fallback for environments without crypto.randomUUID (like some browsers)
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
       const r = (Math.random() * 16) | 0
       const v = c === 'x' ? r : (r & 0x3) | 0x8
       return v.toString(16)

@@ -118,6 +118,7 @@
 import { computed, ref } from 'vue'
 import { useRoute, RouterLink } from 'vue-router'
 import { useSessionStore } from '../stores/sessionStore'
+import type { Location } from '../models/session'
 
 const route = useRoute()
 const sessionStore = useSessionStore()
@@ -163,7 +164,7 @@ const filteredUnfoundLocations = computed(() => {
 })
 
 const filteredLocations = computed(() => {
-  let locations = []
+  let locations: Location[] = []
   
   if (showFoundLocations.value) {
     locations = [...locations, ...filteredFoundLocations.value]
@@ -198,15 +199,17 @@ const itemsSent = computed(() => {
 })
 
 const itemsReceived = computed(() => {
-  if (!game.value) return 0
-  return game.value.items.filter(i => i.holderGameId === game.value.id && i.owningGameId !== game.value.id).length
+  const currentGame = game.value
+  if (!currentGame) return 0
+  return currentGame.items.filter(i => i.holderGameId === currentGame.id && i.owningGameId !== currentGame.id).length
 })
 
 function getGameName(gameId: string): string {
   return sessionStore.games.find(g => g.id === gameId)?.name ?? gameId
 }
 
-function formatDate(date: Date): string {
+function formatDate(date?: Date): string {
+  if (!date) return '—'
   return new Date(date).toLocaleDateString('en-US', {
     month: 'short',
     day: 'numeric',

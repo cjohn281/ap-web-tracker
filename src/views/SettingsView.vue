@@ -52,6 +52,19 @@
         </div>
 
         <div class="form-group">
+          <label for="playerSlot">Player Name / Slot</label>
+          <input
+            id="playerSlot"
+            v-model="connectionStore.settings.playerSlot"
+            type="text"
+            placeholder="Exact player name from the room"
+            @change="updateSetting('playerSlot', $event)"
+            required
+          />
+          <small>Must exactly match your player/slot name in Archipelago.</small>
+        </div>
+
+        <div class="form-group">
           <label for="password">Password (optional)</label>
           <input
             id="password"
@@ -115,6 +128,7 @@
       <ol>
         <li>Find your port number in the Archipelago client (shown when connected)</li>
         <li>Enter your port number here</li>
+        <li>Enter your player name exactly as it appears in the room</li>
         <li>Click "Connect" to establish a WebSocket connection</li>
         <li>Once connected, the overview and game detail pages will update with live data</li>
         <li>Use the game filter on the overview to focus on specific games</li>

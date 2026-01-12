@@ -71,7 +71,13 @@ export const useSessionStore = defineStore('session', {
     processLocations(connectedData: ConnectedPacket, slotInfo: any, dataPackage: any) {
       // Implementation will map location IDs to names using dataPackage
       // This is a placeholder - full implementation depends on data package structure
-      console.log('Processing locations:', connectedData.checked_locations?.length, 'checked')
+      console.log(
+        'Processing locations:',
+        connectedData.checked_locations?.length,
+        'checked using slot info and data package',
+        slotInfo,
+        dataPackage,
+      )
     },
   
     handleRoomUpdate(data: any) {

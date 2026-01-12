@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import { ArchipelagoClient } from '../services/archipelagoClient'
 import { useSessionStore } from './sessionStore'
-import type { ConnectedPacket, RoomInfoPacket } from '../models/apPackets'
+import type { ConnectedPacket, RoomInfoPacket, ConnectionRefusedPacket } from '../models/apPackets'
 
 export type ConnectionStatus = 'disconnected' | 'connecting' | 'connected' | 'error'
 
@@ -44,7 +44,10 @@ export const useConnectionStore = defineStore('connection', {
       return state.status === 'connected'
     },
     canConnect(state): boolean {
-      return state.settings.port.trim() !== ''
+      return (
+        state.settings.port.trim() !== '' &&
+        state.settings.playerSlot.trim() !== ''
+      )
     },
   },
 
@@ -78,7 +81,8 @@ export const useConnectionStore = defineStore('connection', {
           console.log('Room info received:', roomInfo.seed_name)
           
           // Authenticate as tracker/spectator
-          this.client!.authenticate('WebTracker', this.settings.password || null)
+          const slotName = this.settings.playerSlot.trim()
+          this.client!.authenticate(slotName, this.settings.password || null)
           
           // Request data package for item/location names
           this.client!.requestDataPackage()
@@ -92,16 +96,17 @@ export const useConnectionStore = defineStore('connection', {
           console.log('Slot connected:', connectedData.slot)
           
           // Update session store with connected data
-          if (this.client) {
-            const sessionStore = useSessionStore()
-            // If this.client has an internal client property:
-            sessionStore.updateFromArchipelago(connectedData, this.client.ws) // or this.client.archipelagoClient
-          }
+          // if (this.client) {
+          //   const sessionStore = useSessionStore()
+          //   sessionStore.updateFromArchipelago(connectedData, this.client)
+          // }
         })
 
         this.client.on('connectionRefused', (data) => {
+          const packet = data as ConnectionRefusedPacket
+          const reason = packet.errors?.join(', ') || 'Unknown reason'
           this.status = 'error'
-          this.errorMessage = `Connection refused: ${JSON.stringify(data)}`
+          this.errorMessage = `Connection refused: ${reason}`
         })
 
         this.client.on('error', (data: any) => {
@@ -132,7 +137,7 @@ export const useConnectionStore = defineStore('connection', {
         })
 
         // Initiate connection
-        this.client.connect(this.settings.password || null)
+        this.client.connect()
 
       } catch (err) {
         this.status = 'error'
